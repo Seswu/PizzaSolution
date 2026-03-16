@@ -12,6 +12,10 @@ public class MenuControllerTests
 
     [TestMethod]
     public void GetMenu()
+    // This test mocks a MenuService and fakes a TimeProvider, in order to test MenuController.
+    // Specifically, what is being tested is:
+    // When MenuController's constructor is called with some data,
+    // will MenuController.GetMenu later respond with the data it was given?
     {
         // Arrange
         var time = new DateTimeOffset(2030, 10, 12, 0, 0, 0, TimeSpan.Zero);
