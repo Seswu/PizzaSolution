@@ -1,0 +1,121 @@
+digraph ArchitectureDiagram {
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial", fontsize=11];
+    edge [fontname="Arial", fontsize=10, arrowhead=normal];
+    
+    // External clients
+    External [label="External Clients\n(REST API)", fillcolor=lightpink, shape=ellipse];
+    
+    // API Gateway / Entry
+    API [label="API Layer\n(Controllers)", fillcolor=lightgreen];
+    
+    // Service Layer
+    ServiceLayer [label="Service Layer\n(Business Logic)", fillcolor=lightblue];
+    
+    // Domain Layer
+    Domain [label="Domain Layer\n(Pizzas, Models)", fillcolor=lavender];
+    
+    // Infrastructure Layer
+    Infrastructure [label="Infrastructure Layer", fillcolor=lightyellow];
+    subgraph cluster_infra {
+        label="";
+        style=filled;
+        color=lightgoldenrod;
+        
+        Factories [label="Factories\n(IPizzaOven)", fillcolor=lightyellow];
+        Repositories [label="Repositories\n(IStockRepository\nIRecipeRepository)", fillcolor=lightyellow];
+        Extensions [label="Extensions\n(Helpers)", fillcolor=lightyellow];
+    }
+    
+    // Data Layer
+    DataLayer [label="Data Layer\n(FakeDatabase)", fillcolor=lightcyan];
+    
+    // Dependency Injection Container
+    DI [label="DI Container\n(Program.cs)", fillcolor=lightgray, shape=diamond];
+    
+    // Cross-cutting concerns
+    CrossCutting [label="Cross-Cutting\n(ComparableList,\nExtensions)", fillcolor=lightpink, shape=record];
+    
+    // External Client -> API
+    External -> API [label="HTTP Requests"];
+    
+    // API -> Service Layer
+    API -> ServiceLayer [label="Method Calls"];
+    
+    // Service Layer connections
+    subgraph cluster_service_components {
+        label="";
+        style=invis;
+        
+        OrderingService [label="OrderingService\n• Uses IStockService\n• Uses IRecipeService\n• Uses IPizzaOven", fillcolor=lightskyblue, width=2];
+        RecipeService [label="RecipeService\n• Gets recipes from repository", fillcolor=lightskyblue, width=2];
+        StockService [label="StockService\n• Checks/manages stock", fillcolor=lightskyblue, width=2];
+        MenuService [label="MenuService\n• Generates menu", fillcolor=lightskyblue, width=2];
+    }
+    
+    ServiceLayer -> OrderingService;
+    ServiceLayer -> RecipeService;
+    ServiceLayer -> StockService;
+    ServiceLayer -> MenuService;
+    
+    // Service Layer -> Domain
+    ServiceLayer -> Domain [label="Creates/Uses Models"];
+    
+    // Service Layer -> Infrastructure
+    ServiceLayer -> Factories [label="Creates Pizzas"];
+    ServiceLayer -> Repositories [label="Data Access"];
+    
+    // Infrastructure -> Data Layer
+    Repositories -> DataLayer [label="Persists Data"];
+    
+    // Controllers
+    subgraph cluster_controllers {
+        label="Controllers";
+        style=invis;
+        
+        OrderingController [label="OrderingController", fillcolor=palegreen];
+        MenuController [label="MenuController", fillcolor=palegreen];
+        RestockingController [label="RestockingController", fillcolor=palegreen];
+        WelcomeController [label="WelcomeController", fillcolor=palegreen];
+    }
+    
+    // DI -> All registered services
+    DI -> ServiceLayer [label="Injects Dependencies", style=dashed];
+    DI -> Infrastructure [label="Injects Dependencies", style=dashed];
+    
+    // Legend
+    subgraph cluster_legend {
+        label="Architectural Patterns Used";
+        style=dashed;
+        color=gray;
+        
+        Legend [label="• Dependency Injection\n• Repository Pattern\n• Factory Pattern\n• Service Layer Pattern\n• Strategy Pattern (PizzaOven)", 
+               fillcolor=white, shape=none, margin=0.3];
+    }
+    
+    // Arrow direction legend
+    subgraph cluster_arrows {
+        label="Dependency Flow";
+        style=dashed;
+        color=gray;
+        
+        Arrows [label="──── Method Calls\n- - - Dependency Injection\n- · - Data Flow", 
+               fillcolor=white, shape=none, margin=0.3];
+    }
+    
+    // Styles for edges
+    External -> API [color=green, penwidth=2];
+    API -> ServiceLayer [color=green, penwidth=2];
+    ServiceLayer -> Domain [color=blue, penwidth=1.5];
+    ServiceLayer -> Factories [color=orange, penwidth=1.5];
+    ServiceLayer -> Repositories [color=orange, penwidth=1.5];
+    Repositories -> DataLayer [color=cyan, penwidth=1.5];
+    DI -> ServiceLayer [style=dashed, color=gray];
+    DI -> Infrastructure [style=dashed, color=gray];
+    
+    // Subgraph edges
+    API -> OrderingController;
+    API -> MenuController;
+    API -> RestockingController;
+    API -> WelcomeController;
+}

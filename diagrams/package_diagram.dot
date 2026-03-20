@@ -1,0 +1,127 @@
+digraph PackageDiagram {
+    rankdir=LR;
+    node [shape=box, style=filled, fontname="Arial", fontsize=12];
+    edge [fontname="Arial", fontsize=10];
+    
+    // Colors for different layers
+    // Controllers - Green
+    // Services - Blue  
+    // Factories/Repositories - Orange
+    // Models - Purple
+    // Extensions/Core - Gray
+    
+    // Root Package
+    PizzaSolution [label="PizzaSolution", fillcolor=lightgray, shape=folder];
+    
+    // Main Project Package
+    subgraph cluster_pizzaplace {
+        label="PizzaPlace";
+        style=filled;
+        color=lightblue;
+        
+        // Controllers Package
+        subgraph cluster_controllers_pkg {
+            label="Controllers";
+            style=filled;
+            color=lightgreen;
+            Controllers [label="Controllers", fillcolor=palegreen];
+        }
+        
+        // Services Package
+        subgraph cluster_services_pkg {
+            label="Services";
+            style=filled;
+            color=lightblue;
+            Services [label="Services", fillcolor=lightskyblue];
+        }
+        
+        // Factories Package
+        subgraph cluster_factories_pkg {
+            label="Factories";
+            style=filled;
+            color=lightyellow;
+            Factories [label="Factories", fillcolor=lightyellow];
+        }
+        
+        // Repositories Package
+        subgraph cluster_repositories_pkg {
+            label="Repositories";
+            style=filled;
+            color=lightcyan;
+            Repositories [label="Repositories", fillcolor=lightcyan];
+        }
+        
+        // Models Package
+        subgraph cluster_models_pkg {
+            label="Models";
+            style=filled;
+            color=lavender;
+            Models [label="Models", fillcolor=lavender];
+            subgraph cluster_types_pkg {
+                label="Types";
+                style=filled;
+                color=plum;
+                Types [label="Types", fillcolor=plum];
+            }
+        }
+        
+        // Pizzas Package
+        subgraph cluster_pizzas_pkg {
+            label="Pizzas";
+            style=filled;
+            color=honeydew;
+            Pizzas [label="Pizzas", fillcolor=lightgreen];
+        }
+        
+        // Extensions Package
+        subgraph cluster_extensions_pkg {
+            label="Extensions";
+            style=filled;
+            color=lightgray;
+            Extensions [label="Extensions", fillcolor=lightgray];
+        }
+        
+        // Root namespace classes
+        Core [label="Core\\n(PizzaException,\\nComparableList,\\nPizzaAmount,\\nMenuItem)", fillcolor=lightyellow, shape=record];
+    }
+    
+    // Test Project Package
+    subgraph cluster_test {
+        label="PizzaPlace.Test";
+        style=filled;
+        color=lightpink;
+        
+        TestControllers [label="Controllers\\nTests", fillcolor=mistyrose];
+        TestServices [label="Services\\nTests", fillcolor=mistyrose];
+        TestFactories [label="Factories\\nTests", fillcolor=mistyrose];
+        TestRepositories [label="Repositories\\nTests", fillcolor=mistyrose];
+        TestExtensions [label="TestExtensions", fillcolor=mistyrose];
+    }
+    
+    // Dependencies between packages
+    Controllers -> Services [label="uses", style=dashed];
+    Controllers -> Repositories [label="uses", style=dashed];
+    
+    Services -> Repositories [label="uses", style=dashed];
+    Services -> Factories [label="uses", style=dashed];
+    Services -> Models [label="uses", style=dashed];
+    
+    Factories -> Models [label="uses", style=dashed];
+    Factories -> Repositories [label="uses", style=dashed];
+    Factories -> Pizzas [label="creates", style=dashed];
+    
+    Repositories -> Models [label="uses", style=dashed];
+    
+    Extensions -> Models [label="extends", style=dotted];
+    Core -> Models [label="uses", style=dashed];
+    
+    // Test dependencies
+    TestControllers -> Controllers [label="tests", style=dotted, color=red];
+    TestServices -> Services [label="tests", style=dotted, color=red];
+    TestFactories -> Factories [label="tests", style=dotted, color=red];
+    TestRepositories -> Repositories [label="tests", style=dotted, color=red];
+    TestExtensions -> Extensions [label="tests", style=dotted, color=red];
+    
+    // Test project references main project
+    TestProject [label="PizzaPlace.Test\\n(references PizzaPlace)", fillcolor=lightpink, shape=folder];
+}

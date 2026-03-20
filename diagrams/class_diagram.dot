@@ -1,0 +1,174 @@
+digraph ClassDiagram {
+    rankdir=BT;
+    node [shape=record, fontname="Arial", fontsize=10];
+    edge [fontname="Arial", fontsize=9];
+    
+    // Legend
+    subgraph cluster_legend {
+        label="Legend";
+        style=dashed;
+        color=gray;
+        legend_inherit [label="Inheritance", shape=none, margin=0];
+        legend_implements [label="Implements", shape=none, margin=0];
+        legend_uses [label="Uses/Dependency", shape=none, margin=0];
+    }
+    
+    // ===== EXCEPTIONS =====
+    PizzaException [label="{PizzaException|+ PizzaException()\l+ PizzaException(message)\l+ PizzaException(message, innerException)\l}", fillcolor=lightpink];
+    SystemException -> PizzaException [label="inherits", style=dashed];
+    
+    // ===== DTOs =====
+    subgraph cluster_models {
+        label="Models";
+        style=filled;
+        color=lightblue1;
+        
+        Dto [label="{abstract Dto|+ Id : long\l}", fillcolor=lightyellow];
+        
+        StockType [label="{StockType (enum)|Dough\lFermentedDough\lTomatoes\l...|}", fillcolor=lightcyan, shape=record];
+        
+        PizzaRecipeType [label="{PizzaRecipeType (enum)|StandardPizza\lExtremelyTastyPizza\lOddPizza\lRarePizza\l...|}", fillcolor=lightcyan, shape=record];
+        
+        StockDto [label="{StockDto|+ StockType : StockType\l+ Amount : int\l+ Id : long\l}", fillcolor=lightyellow];
+        Dto -> StockDto [label="inherits"];
+        
+        PizzaRecipeDto [label="{PizzaRecipeDto|+ RecipeType : PizzaRecipeType\l+ Ingredients : ComparableList<StockDto>\l+ CookingTimeMinutes : int\l+ Id : long\l}", fillcolor=lightyellow];
+        Dto -> PizzaRecipeDto [label="inherits"];
+        
+        PizzaAmount [label="{PizzaAmount|+ PizzaType : PizzaRecipeType\l+ Amount : ushort\l}"];
+        PizzaOrder [label="{PizzaOrder|+ RequestedOrder : ComparableList<PizzaAmount>\l}"];
+        PizzaPrepareOrder [label="{PizzaPrepareOrder|+ RecipeDto : PizzaRecipeDto\l+ OrderAmount : int\l}"];
+        MenuItem [label="{MenuItem|+ Description : string\l+ PizzaType : PizzaRecipeType\l+ Price : double\l+ SoldOut : bool\l}"];
+        Menu [label="{Menu|+ Title : string\l+ Items : ComparableList<MenuItem>\l}"];
+    }
+    
+    // ===== CUSTOM COLLECTIONS =====
+    ComparableList [label="{ComparableList<T>|+ Count : int\l+ IsReadOnly : bool\l+ this[index] : T\l+ Add()\l+ Clear()\l+ Contains()\l+ IndexOf()\l+ Remove()\l+ RemoveAt()\l}", fillcolor=lightgreen];
+    
+    // ===== REPOSITORIES =====
+    subgraph cluster_repositories {
+        label="Repositories";
+        style=filled;
+        color=lightgoldenrod;
+        
+        FakeDatabase [label="{abstract FakeDatabase<T>|+ Insert()\l+ Get()\l+ Update()\l+ Delete()\l}", fillcolor=mistyrose1];
+        
+        IStockRepository [label="{interface IStockRepository|+ AddToStock()\l+ GetStock()\l+ TakeStock()\l}", shape=interface];
+        
+        IRecipeRepository [label="{interface IRecipeRepository|+ AddRecipe()\l+ GetRecipe()\l}", shape=interface];
+        
+        FakeStockRepository [label="{FakeStockRepository|+ AddToStock()\l+ GetStock()\l+ TakeStock()\l}"];
+        FakeDatabase -> FakeStockRepository [label="inherits"];
+        IStockRepository -> FakeStockRepository [label="implements"];
+        
+        FakeRecipeRepository [label="{FakeRecipeRepository|+ AddRecipe()\l+ GetRecipe()\l+ AddStandardRecipes()\l}"];
+        FakeDatabase -> FakeRecipeRepository [label="inherits"];
+        IRecipeRepository -> FakeRecipeRepository [label="implements"];
+        
+        StockRepository [label="{StockRepository (stub)|+ AddToStock()\l+ GetStock()\l+ TakeStock()\l}"];
+        IStockRepository -> StockRepository [label="implements"];
+        
+        RecipeRepository [label="{RecipeRepository (stub)|+ AddRecipe()\l+ GetRecipe()\l}"];
+        IRecipeRepository -> RecipeRepository [label="implements"];
+    }
+    
+    // ===== SERVICES =====
+    subgraph cluster_services {
+        label="Services";
+        style=filled;
+        color=lavender;
+        
+        IStockService [label="{interface IStockService|+ HasInsufficientStock()\l+ GetStock()\l}", shape=interface];
+        IRecipeService [label="{interface IRecipeService|+ GetPizzaRecipes()\l}", shape=interface];
+        IOrderingService [label="{interface IOrderingService|+ HandlePizzaOrder()\l}", shape=interface];
+        IMenuService [label="{interface IMenuService|+ GetMenu()\l}", shape=interface];
+        
+        StockService [label="{StockService}"];
+        IStockService -> StockService [label="implements"];
+        StockService -> IStockRepository [label="uses"];
+        
+        RecipeService [label="{RecipeService}"];
+        IRecipeService -> RecipeService [label="implements"];
+        RecipeService -> IRecipeRepository [label="uses"];
+        
+        OrderingService [label="{OrderingService}"];
+        IOrderingService -> OrderingService [label="implements"];
+        OrderingService -> IStockService [label="uses"];
+        OrderingService -> IRecipeService [label="uses"];
+        OrderingService -> IPizzaOven [label="uses"];
+        
+        MenuService [label="{MenuService}"];
+        IMenuService -> MenuService [label="implements"];
+    }
+    
+    // ===== FACTORIES (PIZZA OVENS) =====
+    subgraph cluster_factories {
+        label="Factories";
+        style=filled;
+        color=lightcoral;
+        
+        IPizzaOven [label="{interface IPizzaOven|+ PreparePizzas()\l}", shape=interface];
+        
+        PizzaOven [label="{abstract PizzaOven|+ Capacity : abstract int\l+ PreparePizzas()\l# PlanPizzaMaking() : abstract\l# CookPizza()\l# GetPizza()\l}", fillcolor=mistyrose1];
+        IPizzaOven -> PizzaOven [label="implements"];
+        
+        NormalPizzaOven [label="{NormalPizzaOven|+ Capacity = 4\l}"];
+        PizzaOven -> NormalPizzaOven [label="inherits"];
+        
+        AssemblyLinePizzaOven [label="{AssemblyLinePizzaOven|+ Capacity = 1\l+ SetupTimeMinutes = 7\l}"];
+        PizzaOven -> AssemblyLinePizzaOven [label="inherits"];
+        
+        GiantRevolvingPizzaOven [label="{GiantRevolvingPizzaOven|+ Capacity = 120\l}"];
+        PizzaOven -> GiantRevolvingPizzaOven [label="inherits"];
+    }
+    
+    // ===== PIZZA DOMAIN =====
+    subgraph cluster_pizzas {
+        label="Pizzas";
+        style=filled;
+        color=honeydew;
+        
+        Pizza [label="{abstract Pizza|+ Type : PizzaRecipeType\l}", fillcolor=lightgreen];
+        
+        StandardPizza [label="{StandardPizza}"];
+        Pizza -> StandardPizza [label="inherits"];
+        
+        ExtremelyTastyPizza [label="{ExtremelyTastyPizza}"];
+        Pizza -> ExtremelyTastyPizza [label="inherits"];
+    }
+    
+    // ===== CONTROLLERS =====
+    subgraph cluster_controllers {
+        label="Controllers";
+        style=filled;
+        color=wheat;
+        
+        OrderingController [label="{OrderingController|+ PlacePizzaOrder()\l}"];
+        OrderingController -> IOrderingService [label="uses"];
+        
+        MenuController [label="{MenuController|+ GetMenu()\l}"];
+        MenuController -> IMenuService [label="uses"];
+        
+        RestockingController [label="{RestockingController|+ Restock()\l}"];
+        RestockingController -> IStockRepository [label="uses"];
+        
+        WelcomeController [label="{WelcomeController|+ Greet()\l}"];
+    }
+    
+    // ===== EXTENSIONS =====
+    subgraph cluster_extensions {
+        label="Extensions";
+        style=filled;
+        color=lightgray;
+        
+        PizzaHelperExtensions [label="{PizzaHelperExtensions|+ GetRequiredStock()\l+ GatherSameTypeOfStock()\l+ HasEnough()\l}", shape=record];
+        StringExtensions [label="{StringExtensions|+ TryGetEnum<T>()\l}", shape=record];
+        EnumerableExtension [label="{EnumerableExtension|+ ToComparableList<T>()\l}", shape=record];
+    }
+    
+    // Dependency connections
+    Menu -> ComparableList [style=dashed, arrowhead=none];
+    PizzaRecipeDto -> ComparableList [style=dashed, arrowhead=none];
+    PizzaOrder -> ComparableList [style=dashed, arrowhead=none];
+    PizzaPrepareOrder -> PizzaRecipeDto [style=dashed, arrowhead=none];
+}
