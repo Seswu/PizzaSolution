@@ -55,8 +55,9 @@ public class StockServiceTests
     }
 
     // PURPOSE: Verifies that an order with insufficient stock for any ingredient returns true.
-    // ASSUMPTION: The method checks ALL ingredients; running low on even one ingredient
-    //             should cause the entire order to be rejected.
+    // ASSUMPTION: The method follows expediency - checks ingredients sequentially and returns
+    //             immediately upon finding the first insufficient ingredient, without checking the rest.
+    //             This test sets up Dough as insufficient (checked first), so Tomatoes may not be queried.
     // EXPECTATION: When any single ingredient is insufficient, HasInsufficientStock returns true,
     //              preventing the order from being accepted.
     [TestMethod]
@@ -94,7 +95,8 @@ public class StockServiceTests
 
         // Assert
         Assert.IsTrue(result);
-        stockRepository.VerifyAll();
+        // Note: VerifyAll() is intentionally omitted because Tomatoes may not be checked
+        // due to early termination when Dough is found insufficient (expediency principle)
     }
 
     // PURPOSE: Verifies that an empty order always has sufficient stock.
