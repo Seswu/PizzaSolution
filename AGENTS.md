@@ -89,8 +89,9 @@ public class OrderingService(
 ```
 
 ### Collections
-- Use `ComparableList<T>` instead of `List<T>` for equality comparison
+- Use `ComparableList<T>` instead of `List<T>` for equality comparison (provides value-based equality for collections)
 - Use collection expressions `[]` for initialization
+- Convert to/from with `.ToComparableList()` and LINQ
 
 ### Error Handling
 - Throw custom `PizzaException` for domain errors
