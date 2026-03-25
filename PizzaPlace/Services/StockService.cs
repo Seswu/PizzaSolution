@@ -47,6 +47,16 @@ public class StockService(IStockRepository stockRepository) : IStockService
         return stockList;
     }
 
+    // PURPOSE: Deducts stock for all ingredients required by an order.
+    // ASSUMPTION: This is a write operation that modifies stock levels by calling stockRepository.TakeStock.
+    //             The method calculates total ingredients needed, then reduces stock for each.
+    //             Follows the naming pattern where TakeStock modifies stock (vs GetStock which is read-only).
+    // EXPECTATION: Reduces stock for each ingredient; implementation needed - currently throws NotImplementedException.
+    public async Task TakeStock(PizzaOrder order, ComparableList<PizzaRecipeDto> recipeDtos)
+    {
+        throw new NotImplementedException("TakeStock method needs to be implemented.");
+    }
+
     // PURPOSE: Aggregates ingredient requirements from all pizzas in an order.
     // ASSUMPTION: Each pizza type has a recipe specifying its ingredients per unit.
     //             Quantities are summed for duplicate pizza types and zero-quantity pizzas are ignored.

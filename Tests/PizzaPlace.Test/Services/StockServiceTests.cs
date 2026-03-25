@@ -337,4 +337,337 @@ public class StockServiceTests
         stockRepository.Verify(x => x.GetStock(StockType.BellPeppers), Times.Never);
         stockRepository.VerifyAll();
     }
+
+    // PURPOSE: Verifies that GetStock returns correct stock levels for all order ingredients.
+    // ASSUMPTION: The method queries stock for each ingredient required by the order's pizzas.
+    // EXPECTATION: Returns stock levels for all ingredients needed by the order.
+    [TestMethod]
+    public async Task GetStock_ReturnsCorrectStockLevels()
+    {
+        // Arrange
+        var order = new PizzaOrder(new ComparableList<PizzaAmount>
+        {
+            new PizzaAmount(PizzaRecipeType.StandardPizza, 1)
+        });
+
+        var recipes = new ComparableList<PizzaRecipeDto>
+        {
+            new PizzaRecipeDto(PizzaRecipeType.StandardPizza, new ComparableList<StockDto>
+            {
+                new StockDto(StockType.Dough, 2),
+                new StockDto(StockType.Tomatoes, 1)
+            }, 10)
+        };
+
+        var stockRepository = new Mock<IStockRepository>(MockBehavior.Strict);
+        stockRepository.Setup(x => x.GetStock(StockType.Dough))
+            .ReturnsAsync(new StockDto(StockType.Dough, 10));
+        stockRepository.Setup(x => x.GetStock(StockType.Tomatoes))
+            .ReturnsAsync(new StockDto(StockType.Tomatoes, 5));
+
+        var service = GetService(stockRepository.Object);
+
+        // Act
+        var result = await service.GetStock(order, recipes);
+
+        // Assert
+        Assert.AreEqual(2, result.Count);
+        Assert.IsTrue(result.Any(s => s.StockType == StockType.Dough && s.Amount == 10));
+        Assert.IsTrue(result.Any(s => s.StockType == StockType.Tomatoes && s.Amount == 5));
+        stockRepository.VerifyAll();
+    }
+
+    // PURPOSE: Verifies that GetStock returns empty list for empty order.
+    // ASSUMPTION: When no pizzas are ordered, no ingredients are needed, so returns empty list.
+    // EXPECTATION: GetStock returns an empty ComparableList for empty orders.
+    [TestMethod]
+    public async Task GetStock_EmptyOrder_ReturnsEmptyList()
+    {
+        // Arrange
+        var order = new PizzaOrder(new ComparableList<PizzaAmount>());
+
+        var recipes = new ComparableList<PizzaRecipeDto>();
+
+        var stockRepository = new Mock<IStockRepository>(MockBehavior.Strict);
+
+        var service = GetService(stockRepository.Object);
+
+        // Act
+        var result = await service.GetStock(order, recipes);
+
+        // Assert
+        Assert.AreEqual(0, result.Count);
+    }
+
+    // PURPOSE: Verifies that GetStock returns only ingredients needed by the order.
+    // ASSUMPTION: The method should only query stock for ingredients that are actually required.
+    // EXPECTATION: Unused ingredients are not included in the returned stock list.
+    [TestMethod]
+    public async Task GetStock_OnlyRequiredIngredientsReturned()
+    {
+        // Arrange
+        var order = new PizzaOrder(new ComparableList<PizzaAmount>
+        {
+            new PizzaAmount(PizzaRecipeType.StandardPizza, 1)
+        });
+
+        var recipes = new ComparableList<PizzaRecipeDto>
+        {
+            new PizzaRecipeDto(PizzaRecipeType.StandardPizza, new ComparableList<StockDto>
+            {
+                new StockDto(StockType.Dough, 2),
+                new StockDto(StockType.Tomatoes, 1)
+            }, 10)
+        };
+
+        var stockRepository = new Mock<IStockRepository>(MockBehavior.Strict);
+        stockRepository.Setup(x => x.GetStock(StockType.Dough))
+            .ReturnsAsync(new StockDto(StockType.Dough, 10));
+        stockRepository.Setup(x => x.GetStock(StockType.Tomatoes))
+            .ReturnsAsync(new StockDto(StockType.Tomatoes, 5));
+
+        var service = GetService(stockRepository.Object);
+
+        // Act
+        var result = await service.GetStock(order, recipes);
+
+        // Assert
+        Assert.AreEqual(2, result.Count);
+        // Should not include BellPeppers or other unused ingredients
+        stockRepository.Verify(x => x.GetStock(StockType.BellPeppers), Times.Never);
+        stockRepository.VerifyAll();
+    }
+
+    // PURPOSE: Verifies GetStock handles multiple pizza types correctly.
+    // ASSUMPTION: Each pizza type has its own recipe with different ingredients.
+    // EXPECTATION: Returns stock for all unique ingredients across all pizza types.
+    [TestMethod]
+    public async Task GetStock_MultiplePizzaTypes_ReturnsAllIngredients()
+    {
+        // Arrange
+        var order = new PizzaOrder(new ComparableList<PizzaAmount>
+        {
+            new PizzaAmount(PizzaRecipeType.StandardPizza, 1),
+            new PizzaAmount(PizzaRecipeType.ExtremelyTastyPizza, 1)
+        });
+
+        var recipes = new ComparableList<PizzaRecipeDto>
+        {
+            new PizzaRecipeDto(PizzaRecipeType.StandardPizza, new ComparableList<StockDto>
+            {
+                new StockDto(StockType.Dough, 2),
+                new StockDto(StockType.Tomatoes, 1)
+            }, 10),
+            new PizzaRecipeDto(PizzaRecipeType.ExtremelyTastyPizza, new ComparableList<StockDto>
+            {
+                new StockDto(StockType.UnicornDust, 1),
+                new StockDto(StockType.BellPeppers, 2)
+            }, 15)
+        };
+
+        var stockRepository = new Mock<IStockRepository>(MockBehavior.Strict);
+        stockRepository.Setup(x => x.GetStock(StockType.Dough))
+            .ReturnsAsync(new StockDto(StockType.Dough, 10));
+        stockRepository.Setup(x => x.GetStock(StockType.Tomatoes))
+            .ReturnsAsync(new StockDto(StockType.Tomatoes, 5));
+        stockRepository.Setup(x => x.GetStock(StockType.UnicornDust))
+            .ReturnsAsync(new StockDto(StockType.UnicornDust, 3));
+        stockRepository.Setup(x => x.GetStock(StockType.BellPeppers))
+            .ReturnsAsync(new StockDto(StockType.BellPeppers, 4));
+
+        var service = GetService(stockRepository.Object);
+
+        // Act
+        var result = await service.GetStock(order, recipes);
+
+        // Assert
+        Assert.AreEqual(4, result.Count);
+        stockRepository.VerifyAll();
+    }
+
+    // PURPOSE: Verifies that TakeStock reduces stock for all order ingredients.
+    // ASSUMPTION: This is a write operation that calls stockRepository.TakeStock for each ingredient.
+    // EXPECTATION: Stock is reduced for all ingredients required by the order.
+    [TestMethod]
+    public async Task TakeStock_ReducesStockForAllIngredients()
+    {
+        // Arrange
+        var order = new PizzaOrder(new ComparableList<PizzaAmount>
+        {
+            new PizzaAmount(PizzaRecipeType.StandardPizza, 2)
+        });
+
+        var recipes = new ComparableList<PizzaRecipeDto>
+        {
+            new PizzaRecipeDto(PizzaRecipeType.StandardPizza, new ComparableList<StockDto>
+            {
+                new StockDto(StockType.Dough, 2),
+                new StockDto(StockType.Tomatoes, 1)
+            }, 10)
+        };
+
+        var stockRepository = new Mock<IStockRepository>(MockBehavior.Strict);
+        stockRepository.Setup(x => x.TakeStock(StockType.Dough, 4)) // 2 * 2
+            .ReturnsAsync(new StockDto(StockType.Dough, 6));
+        stockRepository.Setup(x => x.TakeStock(StockType.Tomatoes, 2)) // 2 * 1
+            .ReturnsAsync(new StockDto(StockType.Tomatoes, 3));
+
+        var service = GetService(stockRepository.Object);
+
+        // Act
+        await service.TakeStock(order, recipes);
+
+        // Assert
+        stockRepository.Verify(x => x.TakeStock(StockType.Dough, 4), Times.Once);
+        stockRepository.Verify(x => x.TakeStock(StockType.Tomatoes, 2), Times.Once);
+        stockRepository.VerifyAll();
+    }
+
+    // PURPOSE: Verifies that TakeStock handles empty order (no stock changes).
+    // ASSUMPTION: When no pizzas are ordered, no stock operations should occur.
+    // EXPECTATION: No calls to stockRepository.TakeStock for empty orders.
+    [TestMethod]
+    public async Task TakeStock_EmptyOrder_NoStockChanges()
+    {
+        // Arrange
+        var order = new PizzaOrder(new ComparableList<PizzaAmount>());
+        var recipes = new ComparableList<PizzaRecipeDto>();
+
+        var stockRepository = new Mock<IStockRepository>(MockBehavior.Strict);
+
+        var service = GetService(stockRepository.Object);
+
+        // Act
+        await service.TakeStock(order, recipes);
+
+        // Assert
+        stockRepository.Verify(x => x.TakeStock(It.IsAny<StockType>(), It.IsAny<int>()), Times.Never);
+    }
+
+    // PURPOSE: Verifies that TakeStock handles multiple pizza types correctly.
+    // ASSUMPTION: Ingredients from multiple pizza types should all be deducted.
+    // EXPECTATION: All unique ingredients across pizza types are reduced.
+    [TestMethod]
+    public async Task TakeStock_MultiplePizzaTypes_DeductsAllIngredients()
+    {
+        // Arrange
+        var order = new PizzaOrder(new ComparableList<PizzaAmount>
+        {
+            new PizzaAmount(PizzaRecipeType.StandardPizza, 1),
+            new PizzaAmount(PizzaRecipeType.ExtremelyTastyPizza, 1)
+        });
+
+        var recipes = new ComparableList<PizzaRecipeDto>
+        {
+            new PizzaRecipeDto(PizzaRecipeType.StandardPizza, new ComparableList<StockDto>
+            {
+                new StockDto(StockType.Dough, 2),
+                new StockDto(StockType.Tomatoes, 1)
+            }, 10),
+            new PizzaRecipeDto(PizzaRecipeType.ExtremelyTastyPizza, new ComparableList<StockDto>
+            {
+                new StockDto(StockType.UnicornDust, 1),
+                new StockDto(StockType.BellPeppers, 2)
+            }, 15)
+        };
+
+        var stockRepository = new Mock<IStockRepository>(MockBehavior.Strict);
+        stockRepository.Setup(x => x.TakeStock(StockType.Dough, 2))
+            .ReturnsAsync(new StockDto(StockType.Dough, 8));
+        stockRepository.Setup(x => x.TakeStock(StockType.Tomatoes, 1))
+            .ReturnsAsync(new StockDto(StockType.Tomatoes, 4));
+        stockRepository.Setup(x => x.TakeStock(StockType.UnicornDust, 1))
+            .ReturnsAsync(new StockDto(StockType.UnicornDust, 2));
+        stockRepository.Setup(x => x.TakeStock(StockType.BellPeppers, 2))
+            .ReturnsAsync(new StockDto(StockType.BellPeppers, 2));
+
+        var service = GetService(stockRepository.Object);
+
+        // Act
+        await service.TakeStock(order, recipes);
+
+        // Assert
+        stockRepository.VerifyAll();
+    }
+
+    // PURPOSE: Verifies that TakeStock aggregates duplicate pizza types correctly.
+    // ASSUMPTION: When same pizza type appears multiple times, quantities should be summed.
+    // EXPECTATION: Total ingredient deduction equals sum of all quantities.
+    [TestMethod]
+    public async Task TakeStock_DuplicatePizzaTypes_AggregatesQuantities()
+    {
+        // Arrange
+        var order = new PizzaOrder(new ComparableList<PizzaAmount>
+        {
+            new PizzaAmount(PizzaRecipeType.StandardPizza, 2),
+            new PizzaAmount(PizzaRecipeType.StandardPizza, 3)
+        });
+
+        var recipes = new ComparableList<PizzaRecipeDto>
+        {
+            new PizzaRecipeDto(PizzaRecipeType.StandardPizza, new ComparableList<StockDto>
+            {
+                new StockDto(StockType.Dough, 2)
+            }, 10)
+        };
+
+        var stockRepository = new Mock<IStockRepository>(MockBehavior.Strict);
+        // Total: (2+3) * 2 = 10 Dough
+        stockRepository.Setup(x => x.TakeStock(StockType.Dough, 10))
+            .ReturnsAsync(new StockDto(StockType.Dough, 0));
+
+        var service = GetService(stockRepository.Object);
+
+        // Act
+        await service.TakeStock(order, recipes);
+
+        // Assert
+        stockRepository.Verify(x => x.TakeStock(StockType.Dough, 10), Times.Once);
+        stockRepository.VerifyAll();
+    }
+
+    // PURPOSE: Verifies that TakeStock ignores zero-quantity pizzas.
+    // ASSUMPTION: Pizzas with amount 0 should not contribute to stock deduction.
+    // EXPECTATION: Zero-quantity pizzas do not affect stock reduction.
+    [TestMethod]
+    public async Task TakeStock_ZeroQuantityPizza_Ignored()
+    {
+        // Arrange
+        var order = new PizzaOrder(new ComparableList<PizzaAmount>
+        {
+            new PizzaAmount(PizzaRecipeType.StandardPizza, 1),
+            new PizzaAmount(PizzaRecipeType.ExtremelyTastyPizza, 0)
+        });
+
+        var recipes = new ComparableList<PizzaRecipeDto>
+        {
+            new PizzaRecipeDto(PizzaRecipeType.StandardPizza, new ComparableList<StockDto>
+            {
+                new StockDto(StockType.Dough, 2),
+                new StockDto(StockType.Tomatoes, 1)
+            }, 10),
+            new PizzaRecipeDto(PizzaRecipeType.ExtremelyTastyPizza, new ComparableList<StockDto>
+            {
+                new StockDto(StockType.UnicornDust, 1),
+                new StockDto(StockType.BellPeppers, 2)
+            }, 15)
+        };
+
+        var stockRepository = new Mock<IStockRepository>(MockBehavior.Strict);
+        stockRepository.Setup(x => x.TakeStock(StockType.Dough, 2))
+            .ReturnsAsync(new StockDto(StockType.Dough, 8));
+        stockRepository.Setup(x => x.TakeStock(StockType.Tomatoes, 1))
+            .ReturnsAsync(new StockDto(StockType.Tomatoes, 4));
+
+        var service = GetService(stockRepository.Object);
+
+        // Act
+        await service.TakeStock(order, recipes);
+
+        // Assert
+        // UnicornDust and BellPeppers should NOT be called (quantity 0)
+        stockRepository.Verify(x => x.TakeStock(StockType.UnicornDust, It.IsAny<int>()), Times.Never);
+        stockRepository.Verify(x => x.TakeStock(StockType.BellPeppers, It.IsAny<int>()), Times.Never);
+        stockRepository.VerifyAll();
+    }
 }
