@@ -670,4 +670,111 @@ public class StockServiceTests
         stockRepository.Verify(x => x.TakeStock(StockType.BellPeppers, It.IsAny<int>()), Times.Never);
         stockRepository.VerifyAll();
     }
+
+    // PURPOSE: Verifies that Restock returns updated stock for a single item.
+    // ASSUMPTION: The method calls repository.AddToStock and returns the updated DTO.
+    // EXPECTATION: Returns list with the updated stock item.
+    [TestMethod]
+    public async Task Restock_SingleItem_ReturnsUpdatedStock()
+    {
+        // Arrange
+        var stockList = new ComparableList<StockDto> { new StockDto(StockType.Dough, 10) };
+        var updatedStock = new StockDto(StockType.Dough, 20);
+
+        var stockRepository = new Mock<IStockRepository>(MockBehavior.Strict);
+        stockRepository.Setup(x => x.AddToStock(It.Is<StockDto>(s => s.StockType == StockType.Dough && s.Amount == 10)))
+            .ReturnsAsync(updatedStock);
+
+        var service = GetService(stockRepository.Object);
+
+        // Act
+        var result = await service.Restock(stockList);
+
+        // Assert
+        Assert.AreEqual(1, result.Count());
+        Assert.AreEqual(updatedStock, result.First());
+        stockRepository.VerifyAll();
+    }
+
+    // PURPOSE: Verifies that Restock handles multiple items and returns all updated stocks.
+    // ASSUMPTION: The method processes each item in order and collects results.
+    // EXPECTATION: Returns list with all updated stock items in order.
+    [TestMethod]
+    public async Task Restock_MultipleItems_ReturnsAllUpdated()
+    {
+        // Arrange
+        var stockList = new ComparableList<StockDto>
+        {
+            new StockDto(StockType.Dough, 10),
+            new StockDto(StockType.Tomatoes, 5)
+        };
+        var updatedDough = new StockDto(StockType.Dough, 20);
+        var updatedTomatoes = new StockDto(StockType.Tomatoes, 10);
+
+        var stockRepository = new Mock<IStockRepository>(MockBehavior.Strict);
+        stockRepository.Setup(x => x.AddToStock(It.Is<StockDto>(s => s.StockType == StockType.Dough && s.Amount == 10)))
+            .ReturnsAsync(updatedDough);
+        stockRepository.Setup(x => x.AddToStock(It.Is<StockDto>(s => s.StockType == StockType.Tomatoes && s.Amount == 5)))
+            .ReturnsAsync(updatedTomatoes);
+
+        var service = GetService(stockRepository.Object);
+
+        // Act
+        var result = await service.Restock(stockList);
+
+        // Assert
+        Assert.AreEqual(2, result.Count());
+        Assert.AreEqual(updatedDough, result.ElementAt(0));
+        Assert.AreEqual(updatedTomatoes, result.ElementAt(1));
+        stockRepository.VerifyAll();
+    }
+
+    // PURPOSE: Verifies that Restock returns empty list for empty input.
+    // ASSUMPTION: When no stock items are provided, no operations occur.
+    // EXPECTATION: Returns empty enumerable.
+    [TestMethod]
+    public async Task Restock_EmptyList_ReturnsEmpty()
+    {
+        // Arrange
+        var stockList = new ComparableList<StockDto>();
+
+        var stockRepository = new Mock<IStockRepository>(MockBehavior.Strict);
+
+        var service = GetService(stockRepository.Object);
+
+        // Act
+        var result = await service.Restock(stockList);
+
+        // Assert
+        Assert.AreEqual(0, result.Count());
+        stockRepository.VerifyAll();
+    }
+
+    // PURPOSE: Verifies that Restock calls AddToStock with correct parameters for each item.
+    // ASSUMPTION: The method passes each StockDto directly to repository.AddToStock.
+    // EXPECTATION: Repository.AddToStock is called exactly once per item with matching parameters.
+    [TestMethod]
+    public async Task Restock_AddToStockCalledCorrectly()
+    {
+        // Arrange
+        var stockList = new ComparableList<StockDto>
+        {
+            new StockDto(StockType.Dough, 10),
+            new StockDto(StockType.Tomatoes, 5)
+        };
+
+        var stockRepository = new Mock<IStockRepository>(MockBehavior.Strict);
+        stockRepository.Setup(x => x.AddToStock(It.IsAny<StockDto>()))
+            .ReturnsAsync((StockDto s) => s); // Echo back the input
+
+        var service = GetService(stockRepository.Object);
+
+        // Act
+        await service.Restock(stockList);
+
+        // Assert
+        stockRepository.Verify(x => x.AddToStock(It.Is<StockDto>(s => s.StockType == StockType.Dough && s.Amount == 10)), Times.Once);
+        stockRepository.Verify(x => x.AddToStock(It.Is<StockDto>(s => s.StockType == StockType.Tomatoes && s.Amount == 5)), Times.Once);
+        stockRepository.VerifyAll();
+    }
 }
