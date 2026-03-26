@@ -20,7 +20,8 @@ public class RestockingControllerTests
         var expectedResult = new List<StockDto> { new StockDto(StockType.Dough, 20) };
 
         var stockService = new Mock<IStockService>(MockBehavior.Strict);
-        // Removed mock setup to call stub, expect test to fail initially
+        stockService.Setup(x => x.Restock(stockList))
+            .ReturnsAsync(expectedResult);
 
         var controller = GetController(stockService);
 

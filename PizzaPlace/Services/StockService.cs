@@ -107,6 +107,12 @@ public class StockService(IStockRepository stockRepository) : IStockService
     // EXPECTATION: Updates stock levels and returns the updated stock DTOs.
     public async Task<IEnumerable<StockDto>> Restock(ComparableList<StockDto> stock)
     {
-        return [];
+        var results = new List<StockDto>();
+        foreach (var item in stock)
+        {
+            var updated = await stockRepository.AddToStock(item);
+            results.Add(updated);
+        }
+        return results;
     }
 }
