@@ -101,4 +101,12 @@ public class StockService(IStockRepository stockRepository) : IStockService
 
         return requiredIngredients;
     }
+
+    // PURPOSE: Adds stock for the provided items.
+    // ASSUMPTION: Stock addition is idempotent and handles concurrency via repository.
+    // EXPECTATION: Updates stock levels and returns the updated stock DTOs.
+    public async Task<IEnumerable<StockDto>> Restock(ComparableList<StockDto> stock)
+    {
+        return [];
+    }
 }
